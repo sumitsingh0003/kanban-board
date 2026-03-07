@@ -1,8 +1,11 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
+/* :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #ffffff;
 }
 
 @theme inline {
@@ -14,13 +17,135 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #f4f5f7;;
     --foreground: #ededed;
   }
-}
+} */
 
-body {
+/* body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+} */
+
+
+body{
+ margin:0;
+ background:#f4f5f7;
+ font-family:Inter, Arial, sans-serif;
+}
+
+/* board layout */
+
+.board{
+ display:flex;
+ gap:20px;
+ align-items:flex-start;
+}
+
+/* task card */
+
+.task-card{
+ background:white;
+ padding:12px;
+ border-radius:6px;
+ margin-bottom:10px;
+ /* box-shadow:0 1px 3px rgba(0,0,0,0.1); */
+ font-size:14px;
+ cursor:grab;
+ border: 1px solid #ddd;
+ transition:0.2s;
+}
+
+.task-card:hover{
+ background:#f9fafc;
+}
+
+/* create task */
+
+.create-task{
+ display:flex;
+ gap:10px;
+ margin-bottom:10px;
+}
+
+.create-task input{
+ padding:10px;
+ border-radius:6px;
+ border:1px solid #ddd;
+ flex:1;
+}
+
+.create-task button{
+ background:#0079bf;
+ color:white;
+ border:none;
+ padding:10px 14px;
+ border-radius:6px;
+ cursor:pointer;
+}
+
+.create-task button:hover{
+ background:#026aa7;
+}
+
+.cerate-task-button{
+  font-size: 14px;
+  color: #000;
+  font-weight: 600;
+  padding: 7px;
+  transition: all 0.2s linear;
+  cursor: pointer;
+  border-radius: 5px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap:10px;
+  margin-top: 6px;
+}
+.cerate-task-button:hover{
+  background: #ebecf0;
+}
+.task-body-sections {
+    height: calc(100vh - 80px); /* header height adjust */
+}
+
+.task-columns-main-cntainer {
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  background: #F8F8F8;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.column {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-title {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #505258;
+  padding: 10px;
+  flex-shrink: 0;
+}
+
+.tasks-man-box-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+.task-column-main-box::-webkit-scrollbar {
+  width:6px;
+}
+
+.task-column-main-box::-webkit-scrollbar-thumb {
+  background:#ccc;
+  border-radius:10px;
 }
