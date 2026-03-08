@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "components/task/CreateTask.js", "app/dashboard/analytics/dashboard"  ],
   "exclude": ["node_modules"]
 }

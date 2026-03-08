@@ -2,6 +2,8 @@
 
 import { Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./TaskCard";
+import { FiCheck } from "react-icons/fi";
+import AnimatedCounter from "../AnimatedCounter";
 
 export default function Column({ status, tasks }) {
 
@@ -22,6 +24,10 @@ export default function Column({ status, tasks }) {
             {status === "inprogress" && "In Progress"}
             {status === "done" && "Done"}
             {status === "deployedonprod" && "Deployed On Prod"}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 overflow-hidden task-length-value-box"> <AnimatedCounter value={filtered?.length || 0} /> Of <AnimatedCounter value={tasks?.length || 0} /> </div>
+              {status === "done" && <FiCheck />}
+            </div>
           </div>
 
           {/* Scrollable task container */}

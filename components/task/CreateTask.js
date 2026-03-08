@@ -1,33 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { createTask } from "../../services/api";
 import { FiPlus } from "react-icons/fi";
+import TaskModal from "../TaskModal";
+import { socket } from "../../services/socket";
 
 export default function CreateTask({ reload }) {
 
-  const [title, setTitle] = useState("");
-  const handleCreate = async () => {
-    if (!title) return;
-    await createTask(title);
-    setTitle("");
-    reload();
-  };
+  const [open,setOpen] = useState(false);
 
   return (
     <div className="create-task flex-shrink-0">
-      {/* <input
-        value={title}
-        placeholder="Create a new task..."
-        onChange={(e) => setTitle(e.target.value)}
-      />
 
-      <button onClick={handleCreate}>
-        Add
-      </button> */}
-      <div className="cerate-task-button">
+      <div
+        className="cerate-task-button"
+        onClick={()=>setOpen(true)}
+      >
         <FiPlus /> Create
       </div>
+
+      {open && (
+        <TaskModal
+          close={()=>setOpen(false)}
+          refresh={reload}
+          socket={socket}
+        />
+      )}
+
     </div>
   );
 

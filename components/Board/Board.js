@@ -19,14 +19,19 @@ export default function Board() {
     setMounted(true);
     loadTasks();
 
-    socket.on("updateTask", (task) => {
+    socket.on("taskUpdated", (task) => {
       setTasks(prev =>
         prev.map(t => t._id === task._id ? task : t)
       );
     });
 
+     socket.on("taskAdded",(task)=>{
+      setTasks(prev=>[...prev,task]);
+    });
+
     return () => {
-      socket.off("updateTask");
+      socket.off("taskUpdated");
+      socket.off("taskAdded");
     };
 
   }, []);
@@ -40,9 +45,7 @@ export default function Board() {
   const onDragEnd = async (result) => {
 
     const { source, destination } = result;
-
     if (!destination) return;
-
     const columnTasks = tasks
       .filter(t => t.status === source.droppableId)
       .sort((a, b) => a.order - b.order);
