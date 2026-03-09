@@ -1,7 +1,7 @@
-
+// components/Board/TaskCard.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Draggable } from "@hello-pangea/dnd";
 import { 
   FiMoreVertical,
@@ -16,12 +16,47 @@ import TaskModal from "../task/TaskModal";
 import { socket } from "../../services/socket";
 import DeleteConfirmModal from "../task/DeleteConfirmModal";
 import TaskDetailsModal from "../task/TaskDetailsModal";
+import { useUser } from "@/context/UserContext";
+import toast from "react-hot-toast";
+
+// Types
+interface Task {
+  _id: string;
+  title: string;
+  description?: string;
+  priority?: string;
+  dueDate?: string;
+  status: string;
+  taskNumber?: string;
+  createdBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface TaskEditingData {
+  taskId: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface TaskEditStoppedData {
+  taskId: string;
+  user: {
+    _id: string;
+    name: string;
+  };
+}
 
 interface TaskCardProps {
-  task: any;
+  task: Task;
   index: number;
   isDragging?: boolean;
-  status: any;
+  status: string;
   onTaskUpdate: () => void;
   searchTerm?: string;
   highlightText?: (text: string, term: string) => React.ReactNode;
@@ -36,10 +71,58 @@ export default function TaskCard({
   searchTerm = '',
   highlightText 
 }: TaskCardProps) {
+  const { user } = useUser();
   const [showMenu, setShowMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [isBeingEdited, setIsBeingEdited] = useState(false);
+  const [editorName, setEditorName] = useState('');
+
+  // Listen for edit events
+  useEffect(() => {
+    if (!task?._id) return;
+
+    const handleEditingStarted = (data: TaskEditingData) => {
+      if (data.taskId === task._id && data.user._id !== user?._id) {
+        setIsBeingEdited(true);
+        setEditorName(data.user.name);
+        // ✅ Fixed: Use toast.success with custom icon instead of toast.info
+        toast.success(`${data.user.name} started editing this task`, {
+          duration: 3000,
+          icon: '✏️',
+          style: {
+            background: '#f59e0b',
+            color: 'white',
+          }
+        });
+      }
+    };
+
+    const handleEditingStopped = (data: TaskEditStoppedData) => {
+      if (data.taskId === task._id) {
+        setIsBeingEdited(false);
+        setEditorName('');
+        // ✅ Fixed: Use toast.success with custom icon
+        toast.success('Task is now available for editing', {
+          duration: 2000,
+          icon: '🔓',
+          style: {
+            background: '#10b981',
+            color: 'white',
+          }
+        });
+      }
+    };
+
+    socket.on("taskEditingStarted", handleEditingStarted);
+    socket.on("taskEditingStopped", handleEditingStopped);
+
+    return () => {
+      socket.off("taskEditingStarted", handleEditingStarted);
+      socket.off("taskEditingStopped", handleEditingStopped);
+    };
+  }, [task._id, user?._id]);
 
   const getPriorityColor = (priority: string) => {
     switch(priority) {
@@ -66,6 +149,23 @@ export default function TaskCard({
     return highlightText(text, searchTerm);
   };
 
+  const handleEditClick = () => {
+    if (isBeingEdited) {
+      // ✅ Fixed: Use toast.error for error message
+      toast.error(`Task is being edited by ${editorName}`, {
+        duration: 3000,
+        icon: '🔒',
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        }
+      });
+      return;
+    }
+    setShowEditModal(true);
+    setShowMenu(false);
+  };
+
   return (
     <>
       <Draggable draggableId={task._id} index={index}>
@@ -76,7 +176,7 @@ export default function TaskCard({
             {...provided.dragHandleProps}
             className={`task-card ${snapshot.isDragging ? 'dragging' : ''} ${
               isDragging ? 'dragging-other' : ''
-            }`}
+            } ${isBeingEdited ? 'being-edited' : ''}`}
             style={{
               ...provided.draggableProps.style,
               transform: snapshot.isDragging 
@@ -84,6 +184,13 @@ export default function TaskCard({
                 : 'none'
             }}
           >
+            {/* Edit indicator */}
+            {isBeingEdited && (
+              <div className="editing-indicator">
+                <span className="editing-text">✏️ {editorName} is editing...</span>
+              </div>
+            )}
+
             <div className="task-id">
               <span 
                 style={{
@@ -95,7 +202,7 @@ export default function TaskCard({
                 }}
                 onClick={() => setShowDetailsModal(true)}
               >
-                KAN-{task.taskNumber || task._id.slice(-4)} <LucideEye />
+                KAN-{task.taskNumber || task._id.slice(-4)} <LucideEye size={16} />
               </span>
               <div className="task-header-right-part">
                 <div className="task-actions">
@@ -107,14 +214,17 @@ export default function TaskCard({
                   </button>
                   {showMenu && (
                     <div className="task-menu-dropdown">
-                      <button onClick={() => {
-                        setShowEditModal(true);
-                        setShowMenu(false);
-                      }}>
-                        <FiEdit2 /> Edit
+                      <button 
+                        onClick={handleEditClick}
+                        className={isBeingEdited ? 'disabled-option' : ''}
+                        disabled={isBeingEdited}
+                      >
+                        <FiEdit2 /> 
+                        {isBeingEdited ? 'Being Edited...' : 'Edit'}
                       </button>
                       <button 
-                        className="delete-option"
+                        className={`${isBeingEdited ? 'disabled-option' : ''} delete-option`}
+                        disabled={isBeingEdited}
                         onClick={() => {
                           setShowDeleteModal(true);
                           setShowMenu(false);
@@ -128,7 +238,7 @@ export default function TaskCard({
                 {task.createdBy && (
                   <div className="task-creator">
                     <span title={`Created by: ${task.createdBy.name} (${task.createdBy.email})`}>
-                      {task?.createdBy?.name.charAt(0).toUpperCase()}
+                      {task.createdBy.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
@@ -172,7 +282,7 @@ export default function TaskCard({
 
               <div className="comments-count">
                 <FiMessageSquare size={12} />
-                {task.comments?.length || 0}
+                0
               </div>
             </div>
           </div>
@@ -204,8 +314,12 @@ export default function TaskCard({
           task={task}
           onClose={() => setShowDetailsModal(false)}
           onEdit={() => {
-            setShowDetailsModal(false);
-            setShowEditModal(true);
+            if (!isBeingEdited) {
+              setShowDetailsModal(false);
+              setShowEditModal(true);
+            } else {
+              toast.error(`Task is being edited by ${editorName}`);
+            }
           }}
           onDelete={() => {
             setShowDetailsModal(false);

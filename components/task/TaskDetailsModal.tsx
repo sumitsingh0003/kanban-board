@@ -1,4 +1,4 @@
-// components/task/TaskDetailsModal.tsx (Without date-fns)
+// components/task/TaskDetailsModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,8 +15,12 @@ import {
   History as HistoryIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
-  Assignment as TaskIcon
+  Assignment as TaskIcon,
+  Lock as LockIcon
 } from "@mui/icons-material";
+import { useUser } from "@/context/UserContext";
+import { socket } from "../../services/socket";
+import toast from "react-hot-toast";
 
 // Custom date formatting functions
 const formatDate = (dateString: string) => {
@@ -84,9 +88,72 @@ interface TaskDetailsModalProps {
   onDelete?: () => void;
 }
 
+interface TaskEditingData {
+  taskId: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface TaskEditStoppedData {
+  taskId: string;
+  user: {
+    _id: string;
+    name: string;
+  };
+}
+
 export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: TaskDetailsModalProps) {
+  const { user } = useUser();
   const [animateIn, setAnimateIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details');
+  const [isBeingEdited, setIsBeingEdited] = useState(false);
+  const [editorName, setEditorName] = useState('');
+
+  // Listen for edit events
+  useEffect(() => {
+    if (!task?._id) return;
+
+    const handleEditingStarted = (data: TaskEditingData) => {
+      if (data.taskId === task._id && data.user._id !== user?._id) {
+        setIsBeingEdited(true);
+        setEditorName(data.user.name);
+        toast.success(`${data.user.name} started editing this task`, {
+          duration: 3000,
+          icon: '✏️',
+          style: {
+            background: '#f59e0b',
+            color: 'white',
+          }
+        });
+      }
+    };
+
+    const handleEditingStopped = (data: TaskEditStoppedData) => {
+      if (data.taskId === task._id) {
+        setIsBeingEdited(false);
+        setEditorName('');
+        toast.success('Task is now available', {
+          duration: 2000,
+          icon: '🔓',
+          style: {
+            background: '#10b981',
+            color: 'white',
+          }
+        });
+      }
+    };
+
+    socket.on("taskEditingStarted", handleEditingStarted);
+    socket.on("taskEditingStopped", handleEditingStopped);
+
+    return () => {
+      socket.off("taskEditingStarted", handleEditingStarted);
+      socket.off("taskEditingStopped", handleEditingStopped);
+    };
+  }, [task._id, user?._id]);
 
   useEffect(() => {
     setAnimateIn(true);
@@ -97,6 +164,28 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
     setTimeout(() => {
       onClose();
     }, 200);
+  };
+
+  const handleEditClick = () => {
+    if (isBeingEdited) {
+      toast.error(`Task is being edited by ${editorName}`, {
+        duration: 3000,
+        icon: '🔒'
+      });
+      return;
+    }
+    if (onEdit) onEdit();
+  };
+
+  const handleDeleteClick = () => {
+    if (isBeingEdited) {
+      toast.error(`Task is being edited by ${editorName}`, {
+        duration: 3000,
+        icon: '🔒'
+      });
+      return;
+    }
+    if (onDelete) onDelete();
   };
 
   const getPriorityColor = (priority: string) => {
@@ -172,6 +261,13 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
               </span>
             </div>
             <h2 className="task-title-large">{task.title}</h2>
+            
+            {/* Show edit lock warning in header */}
+            {isBeingEdited && (
+              <div className="header-edit-warning">
+                <LockIcon /> Being edited by {editorName}
+              </div>
+            )}
           </div>
           <button className="details-close-btn" onClick={handleClose}>
             <CloseIcon />
@@ -389,7 +485,7 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
                   </div>
                 )}
 
-                {/* Status Changes - You can add more from audit logs */}
+                {/* Status Changes */}
                 {task.status && (
                   <div className="timeline-item">
                     <div className="timeline-icon" style={{ background: getStatusColor(task.status) }}>
@@ -413,11 +509,23 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
 
         {/* Action Buttons */}
         <div className="details-footer">
-          <button className="footer-btn edit" onClick={onEdit}>
-            <EditIcon /> Edit Task
+          <button 
+            className={`footer-btn edit ${isBeingEdited ? 'disabled' : ''}`} 
+            onClick={handleEditClick}
+            disabled={isBeingEdited}
+            title={isBeingEdited ? `Being edited by ${editorName}` : 'Edit task'}
+          >
+            {isBeingEdited ? <LockIcon /> : <EditIcon />}
+            {isBeingEdited ? 'Locked' : 'Edit Task'}
           </button>
-          <button className="footer-btn delete" onClick={onDelete}>
-            <DeleteIcon /> Delete Task
+          <button 
+            className={`footer-btn delete ${isBeingEdited ? 'disabled' : ''}`} 
+            onClick={handleDeleteClick}
+            disabled={isBeingEdited}
+            title={isBeingEdited ? `Being edited by ${editorName}` : 'Delete task'}
+          >
+            {isBeingEdited ? <LockIcon /> : <DeleteIcon />}
+            {isBeingEdited ? 'Locked' : 'Delete Task'}
           </button>
         </div>
       </div>

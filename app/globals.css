@@ -4873,7 +4873,7 @@ Task Board
   border-radius: 8px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
-  min-width: 120px;
+  min-width: 180px;
   z-index: 10;
   animation: slideDown 0.2s ease;
 }
@@ -4902,6 +4902,67 @@ Task Board
 
 .task-menu-dropdown button:last-child {
   border-radius: 0 0 8px 8px;
+}
+
+/* Add to your global CSS */
+
+/* Header edit warning */
+.header-edit-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  border-radius: 40px;
+  color: #f59e0b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  animation: pulse 2s infinite;
+}
+
+.header-edit-warning svg {
+  font-size: 1rem;
+}
+
+/* Disabled footer buttons */
+.footer-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #e2e8f0;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.footer-btn.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.footer-btn.disabled svg {
+  color: #94a3b8;
+}
+
+/* Tooltip for disabled buttons */
+.footer-btn[disabled] {
+  position: relative;
+}
+
+.footer-btn[disabled]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  z-index: 60;
 }
 
 @keyframes slideDown {
@@ -5639,6 +5700,123 @@ Task Board
   transform: translateY(-2px);
   box-shadow: 0 10px 20px -5px rgba(239, 68, 68, 0.3);
 }
+/* Add to your global CSS */
+
+.edit-lock-warning {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 2px solid #ef4444;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  animation: pulse 2s infinite;
+}
+
+.edit-lock-warning svg {
+  color: #ef4444;
+  font-size: 2rem;
+}
+
+.lock-text {
+  flex: 1;
+}
+
+.lock-text strong {
+  display: block;
+  color: #b91c1c;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.lock-text p {
+  color: #7f1d1d;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.lock-text small {
+  color: #9b1c1c;
+  font-size: 0.75rem;
+}
+
+/* Disabled button style */
+.task-menu-dropdown button.disabled-option {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
+.task-menu-dropdown button.disabled-option:hover {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Task Card Edit Indicator */
+.task-card.being-edited {
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+  position: relative;
+  animation: pulse 2s infinite;
+}
+
+.editing-indicator {
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  background: #f59e0b;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  animation: slideIn 0.3s ease;
+}
+
+.editing-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Disabled menu option */
+.task-menu-dropdown button.disabled-option {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.task-menu-dropdown button.disabled-option:hover {
+  background: #f1f5f9;
+  color: #64748b;
+  transform: none;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    border-color: #f59e0b;
+  }
+  50% {
+    border-color: #fbbf24;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* Responsive */
 @media (max-width: 768px) {
