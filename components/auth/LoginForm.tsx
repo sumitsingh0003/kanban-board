@@ -12,10 +12,11 @@ import {
   QrCode as QrCodeIcon
 } from "@mui/icons-material";
 import { loginUser } from "../../services/authApi";
-import { setToken } from "../../utils/auth";
+import { setToken, setUser  } from "../../utils/auth";
 import toast from "react-hot-toast";
 import axios from "axios";
 import Link from "next/link";
+import { getCurrentUser } from "../../services/userApi";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
 export default function LoginForm() {
@@ -27,7 +28,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'password' | 'otp' | 'bio'>('password');
+  // const [loginMethod, setLoginMethod] = useState<'password' | 'otp' | 'bio'>('password');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,23 +64,36 @@ export default function LoginForm() {
     try {
       const res = await loginUser(form);
       setToken(res.data.token);
+
+      const response = await getCurrentUser();
+      if (response.data?.success && response.data?.data) {
+        setUser(response.data.data);
+      } else {
+        throw new Error('Invalid response format');
+      }
+      
       toast.success(res.data.msg);
       router.push("/dashboard");
+       setLoading(false);
+
     } catch (err) {
       if (axios.isAxiosError(err)) {
         toast.error(err.response?.data?.msg || "Login failed");
+         setLoading(false);
       } else {
         toast.error("Something went wrong");
+         setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
+    //  finally {
+    //   setLoading(false);
+    // }
   };
 
-  const handleQuickLogin = (email: string, password: string) => {
-    setForm({ email, password });
-    toast.success(`Demo credentials filled for ${email}`);
-  };
+  // const handleQuickLogin = (email: string, password: string) => {
+  //   setForm({ email, password });
+  //   toast.success(`Demo credentials filled for ${email}`);
+  // };
 
   return (
     <div className="login-form-wrapper">

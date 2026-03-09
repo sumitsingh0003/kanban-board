@@ -14,8 +14,8 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-/* ---------- RESPONSE INTERCEPTOR ---------- */
 
+/* ---------- RESPONSE INTERCEPTOR ---------- */
 API.interceptors.response.use(
   (res) => res,
   (err) => {

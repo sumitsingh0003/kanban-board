@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { FiPlus } from "react-icons/fi";
-import TaskModal from "../TaskModal";
-import { socket } from "../../services/socket";
+import TaskModal from "../../../components/task/TaskModal";
+import { socket } from "../../../services/socket";
 
 export default function CreateTask({ reload }) {
 

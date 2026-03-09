@@ -2,43 +2,65 @@
 
 import { Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./TaskCard";
-import { FiCheck } from "react-icons/fi";
+import { 
+  FiCheck, 
+  FiClock, 
+  FiAlertCircle,
+  FiCheckCircle 
+} from "react-icons/fi";
 import AnimatedCounter from "../AnimatedCounter";
 
-export default function Column({ status, tasks }) {
+export default function Column({ status, title, color, tasks, draggingId, onTaskUpdate, searchTerm, highlightText }) {
+  const filtered = tasks
+    .filter((t) => t.status === status)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const filtered = tasks.filter((t) => t.status === status).sort((a, b) => a.order - b.order);
+  const getStatusIcon = () => {
+    switch(status) {
+      case 'todo': return <FiClock style={{ color }} />;
+      case 'inprogress': return <FiAlertCircle style={{ color }} />;
+      case 'done': return <FiCheck style={{ color }} />;
+      case 'deployedonprod': return <FiCheckCircle style={{ color }} />;
+      default: return null;
+    }
+  };
 
   return (
-    <Droppable droppableId={status}>
-      {(provided) => (
-        <div
-          className="column flex flex-col h-full"
-          ref={provided.innerRef}
-          {...provided.droppableProps}
-        >
-
-          {/* Title (fixed) */}
-          <div className="column-title flex-shrink-0">
-            {status === "todo" && "To Do"}
-            {status === "inprogress" && "In Progress"}
-            {status === "done" && "Done"}
-            {status === "deployedonprod" && "Deployed On Prod"}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 overflow-hidden task-length-value-box"> <AnimatedCounter value={filtered?.length || 0} /> Of <AnimatedCounter value={tasks?.length || 0} /> </div>
-              {status === "done" && <FiCheck />}
-            </div>
-          </div>
-
-          {/* Scrollable task container */}
-          <div className="tasks-man-box-container flex-1 overflow-y-auto">
-            {filtered.map((task, index) => (
-              <TaskCard key={task._id} task={task} index={index} />
-            ))}
-            {provided.placeholder}
-          </div>
+    <div className="column">
+      <div className="column-header" style={{ borderBottomColor: color }}>
+        <div className="column-title">
+          {getStatusIcon()}
+          <span>{title}</span>
         </div>
-      )}
-    </Droppable>
+        <div className="column-stats">
+          <div className="task-count" style={{ background: `${color}20`, color }}>
+            <AnimatedCounter value={filtered.length} />
+          </div>
+          <span className="total-count">of {tasks.length}</span>
+        </div>
+      </div>
+
+      <div className="tasks-container">
+        {filtered.map((task, index) => (
+          <TaskCard
+            key={task._id}
+            task={task}
+            index={index}
+            status={status}
+            isDragging={draggingId === task._id}
+            onTaskUpdate={onTaskUpdate}
+            searchTerm={searchTerm}
+            highlightText={highlightText}
+          />
+        ))}
+        
+        {filtered.length === 0 && (
+          <div className="empty-column">
+            <p>No tasks</p>
+            <small>Drag tasks here</small>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

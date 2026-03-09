@@ -15,11 +15,12 @@ import axios from "axios";
 
 interface Props {
   onClose: () => void;
+  email?: string;
 }
 
-export default function ForgotPasswordModal({ onClose }: Props) {
+export default function ForgotPasswordModal({ onClose, email: initialEmail = "" }: Props) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
@@ -29,7 +30,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Timer for OTP
   useEffect(() => {
     if (step === 2 && timer > 0) {
       const interval = setInterval(() => {
@@ -48,7 +48,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
@@ -79,7 +78,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
 
     setLoading(true);
     try {
-      // Your existing API call pattern
       const res = await forgotPassword({ email });
       toast.success(res.data.msg || "OTP sent to your email");
       setStep(2);
@@ -165,7 +163,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
       toast.success(res.data.msg || "Password reset successfully");
       setStep(4);
       
-      // Auto close after 3 seconds
       setTimeout(() => {
         onClose();
       }, 3000);
@@ -192,7 +189,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
           <p>We'll help you recover your account</p>
         </div>
 
-        {/* Step 1: Email Input */}
         {step === 1 && (
           <div className="modal-step">
             <div className="input-group modal-input">
@@ -216,7 +212,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
           </div>
         )}
 
-        {/* Step 2: OTP Verification */}
         {step === 2 && (
           <div className="modal-step">
             <p className="otp-instruction">
@@ -264,7 +259,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
           </div>
         )}
 
-        {/* Step 3: New Password */}
         {step === 3 && (
           <div className="modal-step">
             <div className="input-group modal-input">
@@ -315,7 +309,6 @@ export default function ForgotPasswordModal({ onClose }: Props) {
           </div>
         )}
 
-        {/* Step 4: Success */}
         {step === 4 && (
           <div className="modal-step success-step">
             <div className="success-icon">

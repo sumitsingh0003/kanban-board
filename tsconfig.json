@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "checkJs": false,
     "plugins": [
       {
         "name": "next"
@@ -29,6 +30,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "components/task/CreateTask.js", "app/dashboard/analytics/dashboard"  ],
+, "components/task/CreateTask.js", "app/dashboard/analytics/dashboard", "components/Board/Board.tsx", "components/dashboard/Sidebar.js"  ],
   "exclude": ["node_modules"]
 }
