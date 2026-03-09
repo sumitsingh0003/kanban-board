@@ -2,7 +2,8 @@ import axios from "axios";
 import { getToken, logout } from "../utils/auth";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000"
+  // baseURL: "http://localhost:5000"
+  baseURL: "https://kanban-board-api-zsyw.onrender.com"
 });
 
 /* ---------- REQUEST INTERCEPTOR ---------- */
