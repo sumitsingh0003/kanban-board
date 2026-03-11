@@ -18,6 +18,7 @@ import axios from "axios";
 import Link from "next/link";
 import { getCurrentUser } from "../../services/userApi";
 import ForgotPasswordModal from "./ForgotPasswordModal";
+import { socketService } from "../../services/socketService";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -68,6 +69,7 @@ export default function LoginForm() {
       const response = await getCurrentUser();
       if (response.data?.success && response.data?.data) {
         setUser(response.data.data);
+        socketService.connect(response.data.data._id);
       } else {
         throw new Error('Invalid response format');
       }

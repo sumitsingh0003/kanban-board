@@ -606,7 +606,18 @@ Task Board
   flex-direction: column;
   gap: 1rem;
 }
+section.activity-section .activity-feed {
+  /* max-width: 600px; */
+  width: 100%;
+  padding: 10px 50px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
+section.activity-section .activity-feed  {
+    width: 49%;
+}
 .activity-item {
   display: flex;
   align-items: center;
@@ -842,6 +853,7 @@ Task Board
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding-top: 10px;
   min-height: 0; 
   /* height: calc(100vh - 100px); */
   /* height: 100%; */
@@ -3348,11 +3360,16 @@ Task Board
   font-size: 0.875rem;
 }
 
-.activity-feed {
-  max-width: 600px;
+.dashboard-home .activity-feed {
+  /* max-width: 600px; */
+  width: 100%;
   margin: 0 auto 2rem;
+  flex-direction: row;
+  flex-wrap: wrap;
 }
-
+.dashboard-home .activity-feed .activity-item {
+    width: 49%;
+}
 .activity-item {
   display: flex;
   align-items: center;
@@ -6481,4 +6498,191 @@ Task Board
   .logout-confirm-btn {
     width: 100%;
   }
+}
+
+
+
+/* Add to your global CSS */
+
+/* Assignee Selector */
+.assignee-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.assignee-select {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: white;
+  cursor: pointer;
+}
+
+.assignee-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.add-assignee-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1.5rem;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-assignee-btn:hover:not(:disabled) {
+  background: #4f46e5;
+  transform: translateY(-2px);
+}
+
+.add-assignee-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Assigned Users List */
+.assigned-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.assigned-user-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.user-tag-info {
+  color: #1e293b;
+}
+
+.user-tag-info strong {
+  color: #0f172a;
+}
+
+.remove-user-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.remove-user-btn:hover {
+  background: #ef4444;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Changes List in History */
+.changes-list {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.changes-list ul {
+  margin: 0.25rem 0 0 1.5rem;
+  padding: 0;
+}
+
+.changes-list li {
+  font-size: 0.8125rem;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.change-field {
+  font-weight: 600;
+  color: #0f172a;
+  text-transform: capitalize;
+}
+
+.change-old {
+  color: #ef4444;
+  text-decoration: line-through;
+}
+
+.change-new {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.move-details {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #475569;
+  background: #e6f0ff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+/* Due date styles */
+.due-date {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.due-date.overdue {
+  background: #fee2e2;
+  color: #ef4444;
+  font-weight: 600;
+  animation: pulse-red 2s infinite;
+}
+
+.due-date.completed {
+  background: #dcfce7;
+  color: #10b981;
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    background: #fee2e2;
+  }
+  50% {
+    background: #fecaca;
+  }
+}
+
+/* No history message */
+.no-history-message {
+  text-align: center;
+  padding: 2rem;
+  color: #94a3b8;
+  font-style: italic;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin: 1rem 0;
 }

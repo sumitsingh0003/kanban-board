@@ -20,6 +20,8 @@ import {
 } from "@mui/icons-material";
 import { useUser } from "@/context/UserContext";
 import { socket } from "../../services/socket";
+import { socketService } from "../../services/socketService";
+import API from "../../services/api"; 
 import toast from "react-hot-toast";
 
 // Custom date formatting functions
@@ -106,11 +108,37 @@ interface TaskEditStoppedData {
 }
 
 export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: TaskDetailsModalProps) {
+  // console.log(task, 'task')
   const { user } = useUser();
   const [animateIn, setAnimateIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details');
   const [isBeingEdited, setIsBeingEdited] = useState(false);
   const [editorName, setEditorName] = useState('');
+  const [taskHistory, setTaskHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Add function to fetch history
+  const fetchTaskHistory = async () => {
+    if (!task?._id) return;
+    console.log(task)
+    setLoadingHistory(true);
+    try {
+      const res = await API.get(`/tasks/${task?._id}`);
+      if (res.data?.success) {
+        setTaskHistory(res.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch task history:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+useEffect(() => {
+  if (activeTab === 'activity') {
+    fetchTaskHistory();
+  }
+}, [activeTab]);
 
   // Listen for edit events
   useEffect(() => {
@@ -146,15 +174,16 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
       }
     };
 
-    socket.on("taskEditingStarted", handleEditingStarted);
-    socket.on("taskEditingStopped", handleEditingStopped);
+    socketService.on("taskEditingStarted", handleEditingStarted);
+    socketService.on("taskEditingStopped", handleEditingStopped);
 
     return () => {
-      socket.off("taskEditingStarted", handleEditingStarted);
-      socket.off("taskEditingStopped", handleEditingStopped);
+      socketService.off("taskEditingStarted", handleEditingStarted);
+      socketService.off("taskEditingStopped", handleEditingStopped);
     };
   }, [task._id, user?._id]);
 
+  
   useEffect(() => {
     setAnimateIn(true);
   }, []);
@@ -435,11 +464,13 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
             </div>
           )}
 
+
           {activeTab === 'activity' && (
             <div className="activity-section">
-              <h3 className="section-title">Activity History</h3>
+              <h3 className="section-title">Complete Task History</h3>
               <div className="activity-timeline">
-                {/* Created Event */}
+                
+                {/* Task Created */}
                 <div className="timeline-item">
                   <div className="timeline-icon" style={{ background: '#10b981' }}>
                     <TaskIcon />
@@ -462,53 +493,96 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
                   </div>
                 </div>
 
-                {/* Updated Event (if exists) */}
-                {task.updatedBy && task.updatedAt !== task.createdAt && (
-                  <div className="timeline-item">
-                    <div className="timeline-icon" style={{ background: '#f59e0b' }}>
-                      <EditIcon />
-                    </div>
-                    <div className="timeline-content">
-                      <div className="timeline-header">
-                        <span className="timeline-title">Task Updated</span>
-                        <span className="timeline-time">
-                          {formatRelativeTime(task.updatedAt)}
-                        </span>
+                {/* Edit History from task.editHistory */}
+                {task.editHistory && task.editHistory.length > 0 && (
+                  task.editHistory.map((edit: any, index: number) => (
+                    <div key={index} className="timeline-item">
+                      <div className="timeline-icon" style={{ background: '#f59e0b' }}>
+                        <EditIcon />
                       </div>
-                      <p className="timeline-description">
-                        Updated by <strong>{task.updatedBy.name}</strong> ({task.updatedBy.email})
-                      </p>
-                      <div className="timeline-datetime">
-                        {formatDateTime(task.updatedAt)}
+                      <div className="timeline-content">
+                        <div className="timeline-header">
+                          <span className="timeline-title">Task Updated</span>
+                          <span className="timeline-time">
+                            {formatRelativeTime(edit.timestamp)}
+                          </span>
+                        </div>
+                        {edit.updatedBy && (
+                          <p className="timeline-description">
+                            Updated by <strong>{edit.updatedBy.name}</strong> ({edit.updatedBy.email})
+                          </p>
+                        )}
+                        {edit.changes && Object.keys(edit.changes).length > 0 && (
+                          <div className="changes-list">
+                            <strong>Changes:</strong>
+                            <ul>
+                              {Object.entries(edit.changes).map(([field, value]: [string, any]) => (
+                                <li key={field}>
+                                  <span className="change-field">{field}:</span>{' '}
+                                  <span className="change-old">{value.old?.toString() || 'none'}</span> →{' '}
+                                  <span className="change-new">{value.new?.toString() || 'none'}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="timeline-datetime">
+                          {formatDateTime(edit.timestamp)}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))
                 )}
 
-                {/* Status Changes */}
-                {task.status && (
-                  <div className="timeline-item">
-                    <div className="timeline-icon" style={{ background: getStatusColor(task.status) }}>
-                      {getStatusIcon(task.status)}
-                    </div>
-                    <div className="timeline-content">
-                      <div className="timeline-header">
-                        <span className="timeline-title">Current Status</span>
-                        <span className="timeline-time">Now</span>
+                {/* Task Moved Events from taskHistory */}
+                    {taskHistory && taskHistory.length > 0 && taskHistory.map((log: any, index: number) => (
+                      log.action === 'TASK_MOVED' && (
+                        <div key={`audit-${index}`} className="timeline-item">
+                          <div className="timeline-icon" style={{ background: '#3b82f6' }}>
+                            <ScheduleIcon />
+                          </div>
+                          <div className="timeline-content">
+                            <div className="timeline-header">
+                              <span className="timeline-title">Task Moved</span>
+                              <span className="timeline-time">
+                                {formatRelativeTime(log.timestamp)}
+                              </span>
+                            </div>
+                            {log.userInfo && (
+                              <p className="timeline-description">
+                                Moved by <strong>{log.userInfo.name}</strong> ({log.userInfo.email})
+                              </p>
+                            )}
+                            {log.metadata && (
+                              <div className="move-details">
+                                From <strong>{log.metadata.from}</strong> → <strong>{log.metadata.to}</strong>
+                                {log.metadata.fromPosition !== undefined && (
+                                  <span> (Position: {log.metadata.fromPosition} → {log.metadata.toPosition})</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="timeline-datetime">
+                              {formatDateTime(log.timestamp)}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    ))}
+
+                    {/* No history message */}
+                    {(!task.editHistory || task.editHistory.length === 0) && 
+                    (!taskHistory || taskHistory.length === 0) && (
+                      <div className="no-history-message">
+                        <p>No activity history available for this task.</p>
                       </div>
-                      <p className="timeline-description">
-                        Task is <strong>{getStatusLabel(task.status)}</strong>
-                      </p>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
         </div>
 
         {/* Action Buttons */}
-        <div className="details-footer">
+        {/* <div className="details-footer">
           <button 
             className={`footer-btn edit ${isBeingEdited ? 'disabled' : ''}`} 
             onClick={handleEditClick}
@@ -527,7 +601,7 @@ export default function TaskDetailsModal({ task, onClose, onEdit, onDelete }: Ta
             {isBeingEdited ? <LockIcon /> : <DeleteIcon />}
             {isBeingEdited ? 'Locked' : 'Delete Task'}
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

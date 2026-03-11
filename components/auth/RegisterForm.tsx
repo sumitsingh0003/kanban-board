@@ -10,10 +10,12 @@ import {
   GitHub
 } from "@mui/icons-material";
 import { registerUser } from "../../services/authApi";
-import { setToken } from "../../utils/auth";
+import { setToken, setUser } from "../../utils/auth";
 import toast from "react-hot-toast";
 import axios from "axios";
 import Link from "next/link";
+import { socketService } from "../../services/socketService";
+import { getCurrentUser } from "@/services/userApi";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -110,6 +112,15 @@ export default function RegisterForm() {
       const { confirmPassword, acceptTerms, ...payload } = form;
       const res = await registerUser(payload);
       setToken(res.data.token);
+      
+      const response = await getCurrentUser();
+        if (response.data?.success && response.data?.data) {
+          setUser(response.data.data);
+          socketService.connect(response.data.data._id);
+        } else {
+          throw new Error('Invalid response format');
+        }
+        
       toast.success(res.data.msg);
       setStep(2);
       

@@ -1,3 +1,4 @@
+// components/task/TaskModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,11 +10,15 @@ import {
   CalendarToday as CalendarIcon,
   Save as SaveIcon,
   Edit as EditIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Person as PersonIcon,
+  PersonAdd as PersonAddIcon
 } from "@mui/icons-material";
 import API from "../../services/api";
 import { useUser } from "@/context/UserContext";
 import toast from "react-hot-toast";
+import { socketService } from "../../services/socketService";
+import { getAllUsers } from "../../services/userApi";
 
 // Define types
 interface User {
@@ -31,6 +36,7 @@ interface Task {
   status?: string;
   taskNumber?: string;
   createdBy?: User;
+  assignedTo?: User[];
 }
 
 interface TaskEditingData {
@@ -67,12 +73,32 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
     priority: "medium",
     dueDate: ""
   });
+  const [assignedTo, setAssignedTo] = useState<User[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [animateIn, setAnimateIn] = useState(false);
   const [taskNumber, setTaskNumber] = useState<string>("...");
   const [isEditingLocked, setIsEditingLocked] = useState(false);
   const [editingUser, setEditingUser] = useState<{ _id: string; name: string } | null>(null);
+
+  // Fetch all users for assignment dropdown
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await getAllUsers();
+        if (res.data?.success) {
+          // Filter out current user
+          const otherUsers = res.data.data.filter((u: User) => u._id !== user?._id);
+          setAvailableUsers(otherUsers);
+        }
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
+    fetchUsers();
+  }, [user?._id]);
 
   useEffect(() => {
     setAnimateIn(true);
@@ -87,11 +113,11 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
           email: user.email
         }
       };
-      socket.emit("taskEditing", editingData);
+      socketService.emit("taskEditing", editingData);
     }
 
     // Listen for edit events
-    socket.on("taskEditingStarted", (data: TaskEditingData) => {
+    socketService.on("taskEditingStarted", (data: TaskEditingData) => {
       if (data.taskId === task?._id && data.user._id !== user?._id) {
         setIsEditingLocked(true);
         setEditingUser(data.user);
@@ -99,14 +125,14 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
       }
     });
 
-    socket.on("taskEditBlocked", (data: TaskEditBlockedData) => {
+    socketService.on("taskEditBlocked", (data: TaskEditBlockedData) => {
       if (data.taskId === task?._id) {
         toast.error(data.message);
         close();
       }
     });
 
-    socket.on("taskEditingStopped", (data: TaskEditStoppedData) => {
+    socketService.on("taskEditingStopped", (data: TaskEditStoppedData) => {
       if (data.taskId === task?._id) {
         setIsEditingLocked(false);
         setEditingUser(null);
@@ -116,11 +142,12 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
 
     if (!isEdit) {
       fetchLatestTaskNumber();
+    } else if (task?.assignedTo) {
+      setAssignedTo(task.assignedTo);
     }
 
     return () => {
       if (isEdit && task?._id && user) {
-        // Notify others that we stopped editing
         const stopData: TaskEditingData = {
           taskId: task._id,
           user: {
@@ -129,12 +156,12 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
             email: user.email
           }
         };
-        socket.emit("taskEditingStopped", stopData);
+        socketService.emit("taskEditingStopped", stopData);
       }
       
-      socket.off("taskEditingStarted");
-      socket.off("taskEditBlocked");
-      socket.off("taskEditingStopped");
+      socketService.off("taskEditingStarted");
+      socketService.off("taskEditBlocked");
+      socketService.off("taskEditingStopped");
     };
   }, [task?._id]);
 
@@ -167,6 +194,19 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
       console.error("Failed to fetch task number:", error);
       setTaskNumber(Date.now().toString().slice(-6));
     }
+  };
+
+  const handleAddAssignee = () => {
+    if (!selectedUserId) return;
+    const userToAdd = availableUsers.find(u => u._id === selectedUserId);
+    if (userToAdd && !assignedTo.some(u => u._id === userToAdd._id)) {
+      setAssignedTo([...assignedTo, userToAdd]);
+      setSelectedUserId('');
+    }
+  };
+
+  const handleRemoveAssignee = (userId: string) => {
+    setAssignedTo(assignedTo.filter(u => u._id !== userId));
   };
 
   const validateForm = () => {
@@ -216,6 +256,7 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
       if (isEdit && task?._id) {
         const updateData = {
           ...form,
+          assignedTo,
           updatedBy: {
             _id: user._id,
             name: user.name,
@@ -226,13 +267,20 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
         
         const res = await API.put(`/tasks/${task._id}`, updateData);
         
-        // Emit task updated event
-        socket.emit("taskUpdated", res.data.data || res.data);
+        socketService.emit("taskUpdated", {
+          task: updateData,
+          updatedBy: {
+            _id: user._id,
+            name: user.name,
+            email: user.email
+          }
+        });
         
         toast.success("Task updated successfully");
       } else {
         const taskData = {
           ...form,
+          assignedTo,
           taskNumber,
           status: "todo",
           order: 0,
@@ -245,7 +293,16 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
         };
         
         const res = await API.post("/tasks", taskData);
-        socket.emit("taskCreated", res.data);
+        
+        socketService.emit("taskCreated", {
+          task: res.data,
+          createdBy: {
+            _id: user._id,
+            name: user.name,
+            email: user.email
+          }
+        });
+        
         toast.success(`Task KAN-${taskNumber} created successfully`);
       }
 
@@ -271,24 +328,23 @@ export default function TaskModal({ close, refresh, socket, task, isEdit = false
     }
   };
 
-
-const handleClose = () => {
-  if (isEdit && task?._id && user) { 
-    socket.emit("taskEditingStopped", {
-      taskId: task._id,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email
-      }
-    });
-  }
-  
-  setAnimateIn(false);
-  setTimeout(() => {
-    close();
-  }, 200);
-};
+  const handleClose = () => {
+    if (isEdit && task?._id && user) { 
+      socketService.emit("taskEditingStopped", {
+        taskId: task._id,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email
+        }
+      });
+    }
+    
+    setAnimateIn(false);
+    setTimeout(() => {
+      close();
+    }, 200);
+  };
 
   return (
     <div className={`task-modal-overlay ${animateIn ? 'show' : ''}`} onClick={handleClose}>
@@ -346,7 +402,7 @@ const handleClose = () => {
                 setForm({...form, title: e.target.value});
                 if (errors.title) setErrors({...errors, title: ''});
               }}
-              disabled={isEditingLocked} // Disable if locked
+              disabled={isEditingLocked}
             />
             {errors.title && <span className="error-message">{errors.title}</span>}
           </div>
@@ -362,8 +418,61 @@ const handleClose = () => {
               value={form.description}
               onChange={(e) => setForm({...form, description: e.target.value})}
               rows={4}
-              disabled={isEditingLocked} // Disable if locked
+              disabled={isEditingLocked}
             />
+          </div>
+
+          {/* Assign To Section */}
+          <div className="form-field">
+            <label className="field-label">
+              <PersonIcon className="field-icon" />
+              Assign To
+            </label>
+            <div className="assignee-selector">
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="assignee-select"
+                disabled={isEditingLocked}
+              >
+                <option value="">Select user to assign</option>
+                {availableUsers.map(u => (
+                  <option key={u._id} value={u._id}>
+                    {u.name} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleAddAssignee}
+                className="add-assignee-btn"
+                disabled={isEditingLocked || !selectedUserId}
+              >
+                <PersonAddIcon /> Add
+              </button>
+            </div>
+
+            {/* Assigned Users List */}
+            {assignedTo.length > 0 && (
+              <div className="assigned-users-list">
+                {assignedTo.map(user => (
+                  <div key={user._id} className="assigned-user-tag">
+                    <span className="user-tag-info">
+                      <strong>{user.name}</strong> ({user.email})
+                    </span>
+                    {!isEditingLocked && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAssignee(user._id)}
+                        className="remove-user-btn"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="form-field">
@@ -378,7 +487,7 @@ const handleClose = () => {
                   type="button"
                   className={`priority-btn ${priority} ${form.priority === priority ? 'selected' : ''}`}
                   onClick={() => setForm({...form, priority})}
-                  disabled={isEditingLocked} // Disable if locked
+                  disabled={isEditingLocked}
                 >
                   {priority.charAt(0).toUpperCase() + priority.slice(1)}
                 </button>
@@ -400,13 +509,9 @@ const handleClose = () => {
                 setForm({...form, dueDate: e.target.value});
                 if (errors.dueDate) setErrors({...errors, dueDate: ''});
               }}
-              disabled={isEditingLocked} // Disable if locked
+              disabled={isEditingLocked}
             />
             {errors.dueDate && <span className="error-message">{errors.dueDate}</span>}
-          </div>
-
-          <div className="current-user-info">
-            <span>You are: {user?.name} ({user?.email})</span>
           </div>
 
         </div>

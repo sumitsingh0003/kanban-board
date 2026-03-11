@@ -11,6 +11,7 @@ import {
   FiEdit2,
   FiTrash2
 } from "react-icons/fi";
+import { Lock } from "lucide-react";
 import { LucideEye } from "lucide-react";
 import TaskModal from "../task/TaskModal";
 import { socket } from "../../services/socket";
@@ -18,6 +19,7 @@ import DeleteConfirmModal from "../task/DeleteConfirmModal";
 import TaskDetailsModal from "../task/TaskDetailsModal";
 import { useUser } from "@/context/UserContext";
 import toast from "react-hot-toast";
+import { socketService } from "../../services/socketService";
 
 // Types
 interface Task {
@@ -26,7 +28,7 @@ interface Task {
   description?: string;
   priority?: string;
   dueDate?: string;
-  status: string;
+  status?: string;
   taskNumber?: string;
   createdBy?: {
     _id: string;
@@ -115,12 +117,12 @@ export default function TaskCard({
       }
     };
 
-    socket.on("taskEditingStarted", handleEditingStarted);
-    socket.on("taskEditingStopped", handleEditingStopped);
+    socketService.on("taskEditingStarted", handleEditingStarted);
+    socketService.on("taskEditingStopped", handleEditingStopped);
 
     return () => {
-      socket.off("taskEditingStarted", handleEditingStarted);
-      socket.off("taskEditingStopped", handleEditingStopped);
+      socketService.off("taskEditingStarted", handleEditingStarted);
+      socketService.off("taskEditingStopped", handleEditingStopped);
     };
   }, [task._id, user?._id]);
 
@@ -165,6 +167,26 @@ export default function TaskCard({
     setShowEditModal(true);
     setShowMenu(false);
   };
+
+  // Add this function
+    const isOverdue = (dueDate?: string, status?: string) => {
+      if (!dueDate) return false;
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const due = new Date(dueDate);
+      due.setHours(0, 0, 0, 0);
+      
+      const isPastOrToday = due <= today;
+      const isInProgressOrTodo = status === 'todo' || status === 'inprogress';
+      
+      return isPastOrToday && isInProgressOrTodo;
+    };
+
+    const isDoneOrDeployed = (status: string) => {
+      return status === 'done' || status === 'deployedonprod';
+    };
 
   return (
     <>
@@ -212,28 +234,28 @@ export default function TaskCard({
                   >
                     <FiMoreVertical />
                   </button>
-                  {showMenu && (
-                    <div className="task-menu-dropdown">
-                      <button 
-                        onClick={handleEditClick}
-                        className={isBeingEdited ? 'disabled-option' : ''}
-                        disabled={isBeingEdited}
-                      >
-                        <FiEdit2 /> 
-                        {isBeingEdited ? 'Being Edited...' : 'Edit'}
-                      </button>
-                      <button 
-                        className={`${isBeingEdited ? 'disabled-option' : ''} delete-option`}
-                        disabled={isBeingEdited}
-                        onClick={() => {
-                          setShowDeleteModal(true);
-                          setShowMenu(false);
-                        }}
-                      >
-                        <FiTrash2 /> Delete
-                      </button>
-                    </div>
-                  )}
+                    {showMenu && (
+                      <div className="task-menu-dropdown">
+                        <button 
+                          onClick={handleEditClick}
+                          className={isBeingEdited ? 'disabled-option' : ''}
+                          disabled={isBeingEdited}
+                        >
+                          {isBeingEdited ? <Lock size={16} /> : <FiEdit2 />} 
+                          {isBeingEdited ? 'Locked ' : 'Edit'}
+                        </button>
+                        <button 
+                          className={`${isBeingEdited ? 'disabled-option' : ''} delete-option`}
+                          disabled={isBeingEdited}
+                          onClick={() => {
+                            setShowDeleteModal(true);
+                            setShowMenu(false);
+                          }}
+                        >
+                          <FiTrash2 /> Delete
+                        </button>
+                      </div>
+                    )}
                 </div>
                 {task.createdBy && (
                   <div className="task-creator">
@@ -271,7 +293,7 @@ export default function TaskCard({
               )}
 
               {task.dueDate && (
-                <div className="due-date">
+                <div className={`due-date ${isOverdue(task.dueDate, status) ? 'overdue' : ''} ${isDoneOrDeployed(status) ? 'completed' : ''}`}>
                   <FiClock size={12} />
                   {new Date(task.dueDate).toLocaleDateString('en-US', { 
                     month: 'short', 

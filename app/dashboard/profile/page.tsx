@@ -230,7 +230,7 @@ export default function Profile() {
                 </div>
                 <div className="info-content">
                   <label>Company</label>
-                    <p>Web InfoTech'</p>
+                    <p>Web InfoTech</p>
                 </div>
               </div>
 

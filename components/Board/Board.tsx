@@ -19,6 +19,8 @@ import TaskModal from "../task/TaskModal";
 import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
 import { LucideFilter } from "lucide-react";
+import { socketService } from "../../services/socketService";
+
 
 // Define types
 interface Task {
@@ -79,41 +81,80 @@ export default function Board() {
   const { user } = useUser();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadTasks();
+ 
+  // Inside Board.tsx, update the useEffect for socket listeners
+useEffect(() => {
+  loadTasks();
 
-    socket.on("taskUpdated", (task: Task) => {
+  // ✅ Task Created
+  socketService.on("taskAdded", (data: any) => {
+    console.log("📥 taskAdded received:", data);
+    const task = data?.task || data;
+    if (task?._id) {
+      setTasks(prev => {
+        // Check if task already exists
+        if (prev.some(t => t._id === task._id)) {
+          return prev;
+        }
+        // Add new task at the beginning (newest first)
+        return [task, ...prev];
+      });
+      
+      // Show notification
+      toast.success(`New task created: ${task.title}`, {
+        icon: '✨',
+        duration: 3000
+      });
+    }
+  });
+
+  // ✅ Task Updated
+  socketService.on("taskUpdated", (data: any) => {
+    console.log("📥 taskUpdated received:", data);
+    const task = data?.task || data;
+    if (task?._id) {
       setTasks(prev =>
         prev.map(t => t._id === task._id ? task : t)
       );
-    });
-
-    socket.on("taskAdded", (task: Task) => {
-      setTasks(prev => [...prev, task]);
-    });
-
-    socket.on("taskDeleted", (taskId: string) => {
-      setTasks(prev => prev.filter(t => t._id !== taskId));
-      toast.success("Task deleted");
-    });
-
-    socket.on("taskMoved", (updatedTask: Task) => {
-      setTasks(prev => {
-        const filtered = prev.filter(t => t._id !== updatedTask._id);
-        return [...filtered, updatedTask];
+      
+      toast.success(`Task updated: ${task.title}`, {
+        icon: '✏️',
+        duration: 2000
       });
-    });
+    }
+  });
 
-    return () => {
-      socket.off("taskUpdated");
-      socket.off("taskAdded");
-      socket.off("taskDeleted");
-      socket.off("taskMoved");
-      if (dragTimeoutRef.current) {
-        clearTimeout(dragTimeoutRef.current);
-      }
-    };
-  }, []);
+  // ✅ Task Moved
+  socketService.on("taskMoved", (data: any) => {
+    console.log("📥 taskMoved received:", data);
+    const task = data?.task || data;
+    if (task?._id) {
+      setTasks(prev => {
+        // Remove old task and add updated one
+        const filtered = prev.filter(t => t._id !== task._id);
+        return [...filtered, task];
+      });
+    }
+  });
+
+  // ✅ Task Deleted
+  socketService.on("taskDeleted", (data: any) => {
+    console.log("📥 taskDeleted received:", data);
+    const taskId = data?.taskId || data;
+    if (taskId) {
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+      toast.success("Task deleted", { icon: '🗑️', duration: 2000 });
+    }
+  });
+
+  return () => {
+    socketService.off("taskAdded");
+    socketService.off("taskUpdated");
+    socketService.off("taskMoved");
+    socketService.off("taskDeleted");
+  };
+}, []);
+
 
   useEffect(() => {
     applyFilters();
@@ -302,10 +343,11 @@ export default function Board() {
         user: user
       });
 
-      socket.emit("taskMoved", {
-        ...res.data,
+      socketService.emit("taskMoved", {
+        task: res.data,
         movedBy: user
       });
+
 
     } catch (err: any) {
       setTasks(tasks);
