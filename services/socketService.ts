@@ -73,7 +73,7 @@ class SocketServiceClass {
     if (this.socket?.connected) return;
 
     try {
-      this.socket = io("http://localhost:5000", {
+      this.socket = io("https://kanban-board-api-zsyw.onrender.com", {
         transports: ["websocket"],
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
