@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API = axios.create({baseURL: "http://localhost:5000"});
+// const API = axios.create({baseURL: "http://localhost:5000"});
+const API = axios.create({baseURL: "https://kanban-board-api-zsyw.onrender.com"});
 
 export const registerUser = (data) => API.post("/auth/register", data);
 export const loginUser = (data) => API.post("/auth/login", data);
